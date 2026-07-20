@@ -339,13 +339,373 @@ function createBatikBoardTexture(renderer, boardWidth, boardDepth) {
   return texture;
 }
 
+function drawMountainLayer(ctx, width, height, baseY, amplitude, color, phase) {
+  ctx.beginPath();
+  ctx.moveTo(0, height);
+  ctx.lineTo(0, baseY);
+  for (let i = 0; i <= 96; i++) {
+    const t = i / 96;
+    const ridge =
+      Math.sin(t * Math.PI * 6 + phase) * 0.38 +
+      Math.sin(t * Math.PI * 14 + phase * 0.7) * 0.17 +
+      Math.abs(Math.sin(t * Math.PI * 4 + phase)) * 0.75;
+    ctx.lineTo(t * width, baseY - ridge * amplitude);
+  }
+  ctx.lineTo(width, height);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawRockyMountain(ctx, width, height) {
+  const points = [
+    [0, 720], [150, 690], [310, 710], [470, 665], [610, 630],
+    [760, 555], [885, 470], [985, 375], [1055, 335], [1135, 390],
+    [1225, 475], [1335, 520], [1430, 585], [1535, 550], [1645, 610],
+    [1780, 650], [1920, 675], [width, 710],
+  ];
+  const mountain = ctx.createLinearGradient(0, 330, 0, 760);
+  mountain.addColorStop(0, '#5b3b42');
+  mountain.addColorStop(0.5, '#854b3e');
+  mountain.addColorStop(1, '#3c362c');
+
+  ctx.beginPath();
+  ctx.moveTo(0, height);
+  ctx.lineTo(points[0][0], points[0][1]);
+  for (const [x, y] of points) ctx.lineTo(x, y);
+  ctx.lineTo(width, height);
+  ctx.closePath();
+  ctx.fillStyle = mountain;
+  ctx.fill();
+
+  const facets = [
+    { color: 'rgba(225, 117, 72, 0.36)', points: [[1055, 335], [1135, 390], [1270, 520], [1080, 475]] },
+    { color: 'rgba(235, 137, 82, 0.28)', points: [[1080, 475], [1270, 520], [1430, 585], [1190, 610]] },
+    { color: 'rgba(38, 36, 43, 0.48)', points: [[760, 555], [985, 375], [1080, 475], [900, 680], [690, 650]] },
+    { color: 'rgba(42, 39, 40, 0.5)', points: [[985, 375], [1055, 335], [1080, 475], [1015, 570]] },
+    { color: 'rgba(207, 94, 58, 0.3)', points: [[1335, 520], [1535, 550], [1645, 610], [1420, 680]] },
+  ];
+  for (const facet of facets) {
+    ctx.beginPath();
+    ctx.moveTo(facet.points[0][0], facet.points[0][1]);
+    for (let i = 1; i < facet.points.length; i++) ctx.lineTo(facet.points[i][0], facet.points[i][1]);
+    ctx.closePath();
+    ctx.fillStyle = facet.color;
+    ctx.fill();
+  }
+
+  ctx.lineCap = 'round';
+  const ridges = [
+    [1055, 350, 1005, 490, 920, 640],
+    [1110, 405, 1160, 500, 1225, 620],
+    [985, 455, 900, 560, 790, 650],
+    [1300, 525, 1395, 590, 1490, 650],
+  ];
+  for (const [x1, y1, cx, cy, x2, y2] of ridges) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.quadraticCurveTo(cx, cy, x2, y2);
+    ctx.lineWidth = 11;
+    ctx.strokeStyle = 'rgba(36, 30, 34, 0.34)';
+    ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(240, 141, 88, 0.3)';
+    ctx.stroke();
+  }
+}
+
+function createVillagePanoramaTexture(renderer) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 2048;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+
+  const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  sky.addColorStop(0, '#b76168');
+  sky.addColorStop(0.33, '#ec866f');
+  sky.addColorStop(0.58, '#ffc486');
+  sky.addColorStop(0.72, '#f5d69a');
+  sky.addColorStop(1, '#5f763d');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const sun = ctx.createRadialGradient(420, 355, 8, 420, 355, 150);
+  sun.addColorStop(0, 'rgba(255, 247, 197, 0.95)');
+  sun.addColorStop(0.25, 'rgba(255, 202, 115, 0.72)');
+  sun.addColorStop(1, 'rgba(255, 210, 120, 0)');
+  ctx.fillStyle = sun;
+  ctx.fillRect(240, 175, 360, 360);
+
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 12; i++) {
+    const y = 90 + i * 35;
+    ctx.beginPath();
+    ctx.moveTo(-80 + (i % 3) * 90, y);
+    ctx.bezierCurveTo(430, y - 28, 1220, y + 42, canvas.width + 90, y - 12);
+    ctx.lineWidth = 18 + (i % 4) * 7;
+    ctx.strokeStyle = i % 2 === 0 ? 'rgba(255, 207, 178, 0.2)' : 'rgba(126, 62, 75, 0.14)';
+    ctx.stroke();
+  }
+
+  drawMountainLayer(ctx, canvas.width, canvas.height, 700, 52, '#8b7770', 1.8);
+  drawRockyMountain(ctx, canvas.width, canvas.height);
+
+  const fields = ctx.createLinearGradient(0, 720, 0, canvas.height);
+  fields.addColorStop(0, '#789746');
+  fields.addColorStop(0.5, '#92a84c');
+  fields.addColorStop(1, '#53692f');
+  ctx.fillStyle = fields;
+  ctx.fillRect(0, 720, canvas.width, canvas.height - 720);
+
+  for (let y = 755; y < canvas.height; y += 48) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    for (let x = 0; x <= canvas.width; x += 64) {
+      ctx.lineTo(x, y + Math.sin(x * 0.012 + y) * 8);
+    }
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = 'rgba(225, 203, 102, 0.5)';
+    ctx.stroke();
+  }
+
+  for (let x = 55; x < canvas.width; x += 118) {
+    ctx.beginPath();
+    ctx.moveTo(x, 728);
+    ctx.lineTo(x + 48, canvas.height);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(44, 81, 35, 0.38)';
+    ctx.stroke();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return texture;
+}
+
+function createPaddyTexture(renderer) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#6e873d';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let row = 0; row < 8; row++) {
+    for (let column = 0; column < 8; column++) {
+      const light = (row + column) % 3;
+      ctx.fillStyle = ['#78933e', '#668037', '#849b43'][light];
+      ctx.fillRect(column * 128 + 5, row * 128 + 5, 118, 118);
+    }
+  }
+
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = '#b5a35a';
+  for (let i = 0; i <= 8; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * 128, 0);
+    ctx.lineTo(i * 128, canvas.height);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, i * 128);
+    ctx.lineTo(canvas.width, i * 128);
+    ctx.stroke();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(4, 4);
+  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return texture;
+}
+
+function createThatchTexture(renderer) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  const base = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  base.addColorStop(0, '#6e421f');
+  base.addColorStop(0.5, '#a16b32');
+  base.addColorStop(1, '#5c3519');
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let x = 0; x < canvas.width; x += 7) {
+    const offset = Math.sin(x * 0.19) * 8;
+    ctx.beginPath();
+    ctx.moveTo(x, -10);
+    ctx.lineTo(x + offset, canvas.height + 10);
+    ctx.lineWidth = x % 21 === 0 ? 3 : 1;
+    ctx.strokeStyle = x % 14 === 0 ? 'rgba(49, 25, 10, 0.55)' : 'rgba(230, 174, 85, 0.28)';
+    ctx.stroke();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(5, 2);
+  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return texture;
+}
+
+function makeRoundBeam(start, end, radius, material) {
+  const direction = end.clone().sub(start);
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius * 0.88, radius, direction.length(), 10),
+    material
+  );
+  beam.position.copy(start).add(end).multiplyScalar(0.5);
+  beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  beam.castShadow = true;
+  beam.receiveShadow = true;
+  return beam;
+}
+
+function addVillageEnvironment(scene, renderer) {
+  const panoramaTexture = createVillagePanoramaTexture(renderer);
+  const panorama = new THREE.Mesh(
+    new THREE.SphereGeometry(52, 64, 32),
+    new THREE.MeshBasicMaterial({
+      map: panoramaTexture,
+      side: THREE.BackSide,
+      fog: false,
+    })
+  );
+  panorama.rotation.y = -0.42;
+  scene.add(panorama);
+
+  const mountainVista = new THREE.Mesh(
+    new THREE.PlaneGeometry(64, 28),
+    new THREE.MeshBasicMaterial({ map: panoramaTexture, fog: false })
+  );
+  mountainVista.position.set(0, 9, -27);
+  scene.add(mountainVista);
+
+  const field = new THREE.Mesh(
+    new THREE.PlaneGeometry(64, 24),
+    new THREE.MeshStandardMaterial({
+      map: createPaddyTexture(renderer),
+      color: 0xb7c17c,
+      roughness: 1,
+    })
+  );
+  field.rotation.x = -Math.PI / 2;
+  field.position.set(0, -1.02, 0);
+  field.receiveShadow = true;
+  scene.add(field);
+
+  const saung = new THREE.Group();
+  const saungWidth = 29;
+  const postX = 13.35;
+  const postZ = 6.75;
+  const eaveY = 7.1;
+  const ridgeY = 9.4;
+  const slatDepth = 0.64;
+  const slatCount = 23;
+  const slatGeometry = new THREE.BoxGeometry(saungWidth, 0.18, slatDepth);
+  const slatMaterials = [
+    new THREE.MeshStandardMaterial({ color: 0x75401f, roughness: 0.84 }),
+    new THREE.MeshStandardMaterial({ color: 0x8b5128, roughness: 0.82 }),
+    new THREE.MeshStandardMaterial({ color: 0x663619, roughness: 0.86 }),
+  ];
+  for (let i = 0; i < slatCount; i++) {
+    const slat = new THREE.Mesh(slatGeometry, slatMaterials[i % slatMaterials.length]);
+    slat.position.set(0, -0.74, (i - (slatCount - 1) / 2) * slatDepth);
+    slat.castShadow = true;
+    slat.receiveShadow = true;
+    saung.add(slat);
+  }
+
+  const darkWood = new THREE.MeshStandardMaterial({ color: 0x4a2815, roughness: 0.78 });
+  const bamboo = new THREE.MeshStandardMaterial({ color: 0x987047, roughness: 0.76 });
+  const postGeometry = new THREE.CylinderGeometry(0.2, 0.27, 7.8, 10);
+  for (const x of [-postX, postX]) {
+    for (const z of [-postZ, postZ]) {
+      const post = new THREE.Mesh(postGeometry, darkWood);
+      post.position.set(x, 3.25, z);
+      post.castShadow = true;
+      post.receiveShadow = true;
+      saung.add(post);
+    }
+  }
+
+  for (const z of [-postZ, postZ]) {
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(postX * 2 + 0.45, 0.3, 0.28), darkWood);
+    beam.position.set(0, eaveY, z);
+    beam.castShadow = true;
+    saung.add(beam);
+  }
+  for (const x of [-postX, postX]) {
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, postZ * 2), darkWood);
+    beam.position.set(x, eaveY, 0);
+    beam.castShadow = true;
+    saung.add(beam);
+  }
+
+  const ridge = new THREE.Mesh(new THREE.BoxGeometry(postX * 2 + 0.8, 0.29, 0.32), darkWood);
+  ridge.position.set(0, ridgeY, 0);
+  ridge.castShadow = true;
+  saung.add(ridge);
+
+  for (const x of [-postX + 0.08, postX - 0.08]) {
+    saung.add(makeRoundBeam(
+      new THREE.Vector3(x, eaveY + 0.05, -postZ - 0.3),
+      new THREE.Vector3(x, ridgeY, 0),
+      0.12,
+      bamboo
+    ));
+    saung.add(makeRoundBeam(
+      new THREE.Vector3(x, ridgeY, 0),
+      new THREE.Vector3(x, eaveY + 0.05, postZ + 0.3),
+      0.12,
+      bamboo
+    ));
+  }
+
+  const rearRoof = new THREE.Mesh(
+    new THREE.PlaneGeometry(saungWidth, postZ + 0.65),
+    new THREE.MeshStandardMaterial({
+      map: createThatchTexture(renderer),
+      color: 0xc09558,
+      roughness: 1,
+      side: THREE.DoubleSide,
+    })
+  );
+  rearRoof.position.set(0, (eaveY + ridgeY) / 2, -postZ / 2 - 0.12);
+  rearRoof.rotation.x = Math.atan2(postZ + 0.25, ridgeY - eaveY);
+  rearRoof.castShadow = true;
+  rearRoof.receiveShadow = true;
+  saung.add(rearRoof);
+
+  const rearRailGeometry = new THREE.BoxGeometry(postX * 2 - 0.8, 0.14, 0.14);
+  for (const y of [0.35, 1.28]) {
+    const rail = new THREE.Mesh(rearRailGeometry, bamboo);
+    rail.position.set(0, y, -postZ + 0.24);
+    rail.castShadow = true;
+    saung.add(rail);
+  }
+  for (let x = -12; x <= 12; x += 3) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.11, 1.75, 0.11), bamboo);
+    rail.position.set(x, 0.42, -postZ + 0.24);
+    rail.castShadow = true;
+    saung.add(rail);
+  }
+
+  scene.add(saung);
+}
+
 export function createScene(container) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0e1420);
-  scene.fog = new THREE.Fog(0x0e1420, 18, 34);
+  scene.background = new THREE.Color(0xa9d4df);
+  scene.fog = new THREE.Fog(0xc4d2bc, 25, 68);
 
   const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-  camera.position.set(0, 9.5, 8.5);
+  camera.position.set(0, 8.2, 10.8);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -367,9 +727,9 @@ export function createScene(container) {
   controls.update();
 
   // ---- Cahaya ----
-  scene.add(new THREE.AmbientLight(0xfff2e0, 0.55));
-  const sun = new THREE.DirectionalLight(0xfff6e6, 1.4);
-  sun.position.set(6, 11, 5);
+  scene.add(new THREE.HemisphereLight(0xdff3ff, 0x665033, 1.05));
+  const sun = new THREE.DirectionalLight(0xffe9bd, 1.65);
+  sun.position.set(-7, 13, 8);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.left = -12;
@@ -378,19 +738,12 @@ export function createScene(container) {
   sun.shadow.camera.bottom = -10;
   sun.shadow.bias = -0.0025;
   scene.add(sun);
-  const fill = new THREE.PointLight(0x6fa8ff, 0.35, 30);
-  fill.position.set(-6, 5, -6);
+  const fill = new THREE.PointLight(0xffc878, 0.32, 28);
+  fill.position.set(5, 4, 4);
   scene.add(fill);
 
-  // ---- Lantai ----
-  const floor = new THREE.Mesh(
-    new THREE.CircleGeometry(20, 48),
-    new THREE.MeshStandardMaterial({ color: 0x11161f, roughness: 1 })
-  );
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.y = -0.85;
-  floor.receiveShadow = true;
-  scene.add(floor);
+  // ---- Saung, sawah, dan panorama desa ----
+  addVillageEnvironment(scene, renderer);
 
   // ---- Papan kayu tradisional berornamen batik ----
   const boardWidth = STORE_X * 2 + STORE_RADIUS_X * 2.5;
