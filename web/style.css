@@ -17,6 +17,7 @@ html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
   background: var(--bg);
   color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -101,6 +102,7 @@ html, body {
   color: var(--text);
   cursor: pointer;
   font-weight: 600;
+  touch-action: manipulation;
 }
 
 #restart:hover,
@@ -159,7 +161,7 @@ html, body {
   border: 1px solid var(--panel-border);
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 .player-fields { display: flex; flex-direction: column; gap: 0.4rem; }
@@ -178,6 +180,7 @@ html, body {
   color: #241a0c;
   font-weight: 700;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .modal-card button[type='submit']:hover {
@@ -275,4 +278,102 @@ html, body {
 
 .loading.hidden {
   opacity: 0;
+}
+
+@media (max-width: 700px), (max-height: 520px) {
+  .hud {
+    padding: max(0.65rem, env(safe-area-inset-top)) max(0.65rem, env(safe-area-inset-right))
+      max(0.65rem, env(safe-area-inset-bottom)) max(0.65rem, env(safe-area-inset-left));
+  }
+
+  .hud-top {
+    pointer-events: none;
+  }
+
+  .hud-top h1 {
+    font-size: 1.15rem;
+  }
+
+  .turn-indicator {
+    font-size: 0.9rem;
+  }
+
+  .side-panel {
+    top: auto;
+    right: max(0.65rem, env(safe-area-inset-right));
+    bottom: max(0.65rem, env(safe-area-inset-bottom));
+    left: max(0.65rem, env(safe-area-inset-left));
+    width: auto;
+    max-width: none;
+    padding: 0.55rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.45rem;
+  }
+
+  .message,
+  .hint {
+    grid-column: 1 / -1;
+    margin: 0;
+    text-align: center;
+  }
+
+  .message {
+    min-height: 0;
+    font-size: 0.8rem;
+  }
+
+  .hint {
+    font-size: 0.7rem;
+  }
+
+  #restart,
+  #rename {
+    min-height: 44px;
+    margin: 0;
+    padding: 0.6rem 0.45rem;
+  }
+
+  .modal-backdrop {
+    padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+      max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+  }
+
+  .modal-card {
+    width: 100%;
+    max-width: 360px;
+    padding: 1.35rem 1.25rem;
+  }
+
+  .modal-card input,
+  .modal-card button[type='submit'] {
+    min-height: 44px;
+  }
+
+  .seed-label {
+    font-size: 0.82rem;
+  }
+
+  .seed-label.store-label-3d {
+    font-size: 1rem;
+  }
+}
+
+@media (max-height: 520px) {
+  .hint {
+    display: none;
+  }
+
+  .side-panel {
+    padding: 0.4rem;
+  }
+
+  .modal-card {
+    padding: 0.9rem 1.1rem;
+  }
+
+  .modal-card h2 {
+    margin-bottom: 0.3rem;
+    font-size: 1.2rem;
+  }
 }
