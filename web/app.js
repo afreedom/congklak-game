@@ -29,6 +29,48 @@ const NAME_STORAGE_KEY = 'congklak-player-names';
 const DEFAULT_NAMES = { A: 'Pemain A', B: 'Pemain B' };
 const MODE_STORAGE_KEY = 'congklak-play-mode';
 
+let audioContext = null;
+
+function getAudioContext() {
+  if (audioContext) return audioContext;
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return null;
+  audioContext = new AudioContext();
+  return audioContext;
+}
+
+document.addEventListener('pointerdown', () => {
+  const context = getAudioContext();
+  if (context?.state === 'suspended') context.resume().catch(() => {});
+}, { once: true });
+
+function playOutcomeSound(outcome) {
+  const context = getAudioContext();
+  if (!context) return;
+
+  const patterns = {
+    win: [[523.25, 0, 0.16], [659.25, 0.14, 0.16], [783.99, 0.28, 0.18], [1046.5, 0.44, 0.38]],
+    lose: [[392, 0, 0.2], [349.23, 0.18, 0.2], [293.66, 0.36, 0.22], [196, 0.56, 0.42]],
+    draw: [[440, 0, 0.18], [523.25, 0.17, 0.18], [440, 0.34, 0.18], [523.25, 0.51, 0.28]],
+  };
+
+  const start = context.currentTime + 0.04;
+  const waveform = outcome === 'lose' ? 'triangle' : 'sine';
+  for (const [frequency, offset, duration] of patterns[outcome]) {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const noteStart = start + offset;
+    oscillator.type = waveform;
+    oscillator.frequency.setValueAtTime(frequency, noteStart);
+    gain.gain.setValueAtTime(0.0001, noteStart);
+    gain.gain.exponentialRampToValueAtTime(0.16, noteStart + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + duration);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start(noteStart);
+    oscillator.stop(noteStart + duration + 0.03);
+  }
+}
+
 function loadNames() {
   try {
     const raw = localStorage.getItem(NAME_STORAGE_KEY);
@@ -166,6 +208,7 @@ function showAiResult() {
     piece.style.setProperty('--hue', `${(index * 53) % 360}`);
     return piece;
   }));
+  playOutcomeSound(outcome);
   resultModal.classList.remove('hidden');
   playAgainBtn.focus();
 }
