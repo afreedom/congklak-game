@@ -6,6 +6,7 @@ const turnIndicator = document.getElementById('turn-indicator');
 const messageEl = document.getElementById('message');
 const restartBtn = document.getElementById('restart');
 const renameBtn = document.getElementById('rename');
+const soundToggleBtn = document.getElementById('sound-toggle');
 const loadingEl = document.getElementById('loading');
 const nameModal = document.getElementById('name-modal');
 const nameForm = document.getElementById('name-form');
@@ -28,14 +29,25 @@ const celebration = document.getElementById('celebration');
 const NAME_STORAGE_KEY = 'congklak-player-names';
 const DEFAULT_NAMES = { A: 'Pemain A', B: 'Pemain B' };
 const MODE_STORAGE_KEY = 'congklak-play-mode';
+const SOUND_STORAGE_KEY = 'congklak-sound-enabled';
 
 let audioContext = null;
+let masterGain = null;
+let soundEnabled = true;
+try {
+  soundEnabled = localStorage.getItem(SOUND_STORAGE_KEY) !== 'off';
+} catch {
+  // Gunakan suara aktif jika penyimpanan browser tidak tersedia.
+}
 
 function getAudioContext() {
   if (audioContext) return audioContext;
   const AudioContext = window.AudioContext || window.webkitAudioContext;
   if (!AudioContext) return null;
   audioContext = new AudioContext();
+  masterGain = audioContext.createGain();
+  masterGain.gain.value = soundEnabled ? 0.55 : 0;
+  masterGain.connect(audioContext.destination);
   return audioContext;
 }
 
@@ -44,7 +56,102 @@ document.addEventListener('pointerdown', () => {
   if (context?.state === 'suspended') context.resume().catch(() => {});
 }, { once: true });
 
+function scheduleTone(context, {
+  frequency,
+  endFrequency = frequency,
+  offset = 0,
+  duration = 0.1,
+  volume = 0.1,
+  type = 'sine',
+}) {
+  const start = context.currentTime + 0.015 + offset;
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, start);
+  oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, endFrequency), start + duration);
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(volume, start + Math.min(0.018, duration * 0.25));
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  oscillator.connect(gain).connect(masterGain);
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.03);
+}
+
+function playGameSound(type, variant = 0) {
+  if (!soundEnabled) return;
+  const context = getAudioContext();
+  if (!context) return;
+  if (context.state === 'suspended') context.resume().catch(() => {});
+
+  if (type === 'pickup') {
+    const taps = Math.max(2, Math.min(5, Math.ceil(variant / 3)));
+    for (let i = 0; i < taps; i++) {
+      scheduleTone(context, {
+        frequency: 230 + i * 32,
+        endFrequency: 105 + i * 12,
+        offset: i * 0.035,
+        duration: 0.09,
+        volume: 0.09,
+        type: 'triangle',
+      });
+    }
+  } else if (type === 'sow') {
+    const frequency = 620 + (variant % 5) * 48;
+    scheduleTone(context, { frequency, endFrequency: frequency * 0.58, duration: 0.065, volume: 0.075 });
+    scheduleTone(context, {
+      frequency: frequency * 1.72,
+      endFrequency: frequency,
+      offset: 0.008,
+      duration: 0.045,
+      volume: 0.035,
+    });
+  } else if (type === 'capture') {
+    scheduleTone(context, { frequency: 310, endFrequency: 120, duration: 0.16, volume: 0.14, type: 'triangle' });
+    scheduleTone(context, { frequency: 520, endFrequency: 260, offset: 0.07, duration: 0.18, volume: 0.12, type: 'triangle' });
+  } else if (type === 'dead') {
+    scheduleTone(context, { frequency: 175, endFrequency: 90, duration: 0.24, volume: 0.1, type: 'triangle' });
+  } else if (type === 'extra') {
+    for (const [frequency, offset] of [[523.25, 0], [659.25, 0.1], [783.99, 0.2]]) {
+      scheduleTone(context, { frequency, offset, duration: 0.16, volume: 0.1 });
+    }
+  } else if (type === 'turn') {
+    scheduleTone(context, { frequency: 392, endFrequency: 330, duration: 0.11, volume: 0.055 });
+  } else if (type === 'start') {
+    for (const [frequency, offset] of [[392, 0], [523.25, 0.09], [659.25, 0.18]]) {
+      scheduleTone(context, { frequency, offset, duration: 0.14, volume: 0.085 });
+    }
+  }
+}
+
+function updateSoundToggle() {
+  soundToggleBtn.textContent = soundEnabled ? 'Suara: Aktif' : 'Suara: Mati';
+  soundToggleBtn.setAttribute('aria-pressed', String(soundEnabled));
+  soundToggleBtn.setAttribute('aria-label', soundEnabled ? 'Matikan suara permainan' : 'Aktifkan suara permainan');
+}
+
+soundToggleBtn.addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  try {
+    localStorage.setItem(SOUND_STORAGE_KEY, soundEnabled ? 'on' : 'off');
+  } catch {
+    // Status suara tetap berlaku untuk sesi ini.
+  }
+  const context = getAudioContext();
+  if (context && masterGain) {
+    masterGain.gain.setTargetAtTime(soundEnabled ? 0.55 : 0, context.currentTime, 0.015);
+    if (soundEnabled) {
+      context.resume().catch(() => {});
+      playGameSound('start');
+    }
+  }
+  updateSoundToggle();
+});
+
+updateSoundToggle();
+
 function playOutcomeSound(outcome) {
+  if (!soundEnabled) return;
   const context = getAudioContext();
   if (!context) return;
 
@@ -65,7 +172,7 @@ function playOutcomeSound(outcome) {
     gain.gain.setValueAtTime(0.0001, noteStart);
     gain.gain.exponentialRampToValueAtTime(0.16, noteStart + 0.025);
     gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + duration);
-    oscillator.connect(gain).connect(context.destination);
+    oscillator.connect(gain).connect(masterGain);
     oscillator.start(noteStart);
     oscillator.stop(noteStart + duration + 0.03);
   }
@@ -141,7 +248,11 @@ nameForm.addEventListener('submit', (event) => {
     // Mode tetap berlaku untuk sesi ini.
   }
   closeNameModal();
-  if (modeChanged) resetGame();
+  if (modeChanged) {
+    resetGame();
+  } else {
+    playGameSound('start');
+  }
   updateHud();
 });
 
@@ -252,14 +363,17 @@ async function animateMove(holeIndex) {
       board[step.hole] = 0;
       handAt = step.hole;
       updateHud(`${playerName} mengambil ${step.seeds} biji dari lubang ${step.hole}...`);
+      playGameSound('pickup', step.seeds);
       await scene.pickupHole(step.hole);
     } else if (step.type === 'sow') {
       updateHud(`${playerName} menabur...`);
+      playGameSound('sow', step.hole);
       await scene.flySeed(handAt, step.hole);
       board[step.hole] += 1;
       handAt = step.hole;
     } else if (step.type === 'capture') {
       updateHud(`${playerName} tembak!`);
+      playGameSound('capture');
       await Promise.all([
         scene.flyAllSeeds(step.hole, step.store),
         scene.flyAllSeeds(step.opposite, step.store),
@@ -269,9 +383,11 @@ async function animateMove(holeIndex) {
       await scene.pulseHighlight([step.store]);
     } else if (step.type === 'dead') {
       updateHud(`Biji mati di lubang ${step.hole}.`);
+      playGameSound('dead');
       await scene.pulseHighlight([step.hole], 0x888888, 350);
     } else if (step.type === 'extraTurn') {
       updateHud(`${playerName} mendapat giliran ekstra!`);
+      playGameSound('extra');
       await scene.pulseHighlight([storeOf(player)]);
     }
   }
@@ -280,6 +396,7 @@ async function animateMove(holeIndex) {
     const holesToSweep = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14].filter((h) => board[h] > 0);
     if (holesToSweep.length > 0) {
       updateHud('Menghitung skor akhir...');
+      playGameSound('capture');
       await Promise.all(holesToSweep.map((h) => scene.flyAllSeeds(h, h <= 6 ? 7 : 15)));
       await scene.pulseHighlight([7, 15]);
     }
@@ -291,6 +408,10 @@ async function animateMove(holeIndex) {
   animating = false;
   syncInteractivity();
   updateHud();
+  if (!state.gameOver && state.currentPlayer !== player) playGameSound('turn');
+  if (state.gameOver && playMode === 'pvp') {
+    playOutcomeSound(state.winner === 'draw' ? 'draw' : 'win');
+  }
   showAiResult();
 }
 
@@ -317,6 +438,7 @@ function resetGame() {
   scene.setBoard(state.board);
   syncInteractivity();
   updateHud();
+  playGameSound('start');
 }
 
 restartBtn.addEventListener('click', resetGame);

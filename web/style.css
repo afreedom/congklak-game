@@ -93,7 +93,8 @@ html, body {
 }
 
 #restart,
-#rename {
+#rename,
+#sound-toggle {
   width: 100%;
   padding: 0.5rem 1rem;
   border-radius: 8px;
@@ -106,11 +107,13 @@ html, body {
 }
 
 #restart:hover,
-#rename:hover {
+#rename:hover,
+#sound-toggle:hover {
   background: rgba(255, 255, 255, 0.16);
 }
 
-#rename {
+#rename,
+#sound-toggle {
   margin-top: 0.5rem;
 }
 
@@ -312,6 +315,7 @@ html, body {
   }
 
   .message,
+  .game-mode,
   .hint {
     grid-column: 1 / -1;
     margin: 0;
@@ -323,15 +327,25 @@ html, body {
     font-size: 0.8rem;
   }
 
+  .game-mode {
+    font-size: 0.72rem;
+  }
+
   .hint {
     font-size: 0.7rem;
   }
 
   #restart,
-  #rename {
+  #rename,
+  #sound-toggle {
     min-height: 44px;
     margin: 0;
     padding: 0.6rem 0.45rem;
+  }
+
+  #sound-toggle {
+    grid-column: 1 / -1;
+    min-height: 38px;
   }
 
   .modal-backdrop {
