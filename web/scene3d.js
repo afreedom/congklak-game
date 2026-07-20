@@ -607,12 +607,21 @@ function addVillageEnvironment(scene, renderer) {
   const ridgeY = 9.4;
   const slatDepth = 0.64;
   const slatCount = 23;
-  const slatGeometry = new THREE.BoxGeometry(saungWidth, 0.18, slatDepth);
+  const slatGeometry = new THREE.BoxGeometry(saungWidth, 0.18, slatDepth - 0.055);
   const slatMaterials = [
-    new THREE.MeshStandardMaterial({ color: 0x75401f, roughness: 0.84 }),
-    new THREE.MeshStandardMaterial({ color: 0x8b5128, roughness: 0.82 }),
-    new THREE.MeshStandardMaterial({ color: 0x663619, roughness: 0.86 }),
+    new THREE.MeshStandardMaterial({ color: 0xc79552, roughness: 0.88 }),
+    new THREE.MeshStandardMaterial({ color: 0xdaa962, roughness: 0.86 }),
+    new THREE.MeshStandardMaterial({ color: 0xb98443, roughness: 0.9 }),
   ];
+
+  const deckBase = new THREE.Mesh(
+    new THREE.BoxGeometry(saungWidth + 0.12, 0.12, slatCount * slatDepth + 0.12),
+    new THREE.MeshStandardMaterial({ color: 0x2c1a10, roughness: 0.92 })
+  );
+  deckBase.position.y = -0.87;
+  deckBase.receiveShadow = true;
+  saung.add(deckBase);
+
   for (let i = 0; i < slatCount; i++) {
     const slat = new THREE.Mesh(slatGeometry, slatMaterials[i % slatMaterials.length]);
     slat.position.set(0, -0.74, (i - (slatCount - 1) / 2) * slatDepth);
