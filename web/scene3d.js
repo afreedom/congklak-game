@@ -713,6 +713,9 @@ export function createScene(container) {
   scene.background = new THREE.Color(0xa9d4df);
   scene.fog = new THREE.Fog(0xc4d2bc, 25, 68);
 
+  const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+  camera.position.set(0, 8.2, 10.8);
+
   function usesPortraitFraming() {
     return container.clientWidth / container.clientHeight < 0.85;
   }

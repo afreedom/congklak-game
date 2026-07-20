@@ -19,6 +19,25 @@ export function getValidMoves(state) {
   return small.filter((i) => state.board[i] > 0);
 }
 
+/** Pilih langkah AI secara deterministik berdasarkan hasil simulasi satu langkah. */
+export function chooseAiMove(state) {
+  const moves = getValidMoves(state);
+  if (moves.length === 0) return null;
+  const player = state.currentPlayer;
+  const store = HOLES[player].store;
+  const small = HOLES[player].small;
+  return moves.map((move) => {
+    const result = applyMove(state, move);
+    const storeGain = result.board[store] - state.board[store];
+    const extraTurn = !result.gameOver && result.currentPlayer === player;
+    const ownSeeds = small.reduce((total, hole) => total + result.board[hole], 0);
+    const outcome = result.gameOver
+      ? result.winner === player ? 1_000_000 : result.winner === 'draw' ? 100_000 : -1_000_000
+      : 0;
+    return { move, score: outcome + (extraTurn ? 10_000 : 0) + storeGain * 100 + ownSeeds };
+  }).sort((a, b) => b.score - a.score || a.move - b.move)[0].move;
+}
+
 function ownerOfSmallHole(index) {
   if (index >= 0 && index <= 6) return 'A';
   if (index >= 8 && index <= 14) return 'B';

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initGame, getValidMoves, applyMove, checkGameOver } from '../src/congklak.js';
+import { initGame, getValidMoves, applyMove, checkGameOver, chooseAiMove } from '../src/congklak.js';
 
 function makeState(overrides = {}) {
   return {
@@ -39,6 +39,18 @@ test('getValidMoves: lubang kecil yang sudah kosong tidak termasuk valid moves',
 test('getValidMoves: untuk pemain B, hanya lubang 8-14 yang tidak kosong', () => {
   const state = { ...initGame(), currentPlayer: 'B' };
   assert.deepEqual(getValidMoves(state), [8, 9, 10, 11, 12, 13, 14]);
+});
+
+test('chooseAiMove: memilih langkah yang memberi giliran ekstra', () => {
+  const board = new Array(16).fill(0);
+  board[0] = 1; // pemain A tetap punya langkah, jadi langkah lain bukan kemenangan instan
+  board[8] = 7;
+  board[9] = 1;
+  assert.equal(chooseAiMove(makeState({ board, currentPlayer: 'B' })), 8);
+});
+
+test('chooseAiMove: mengembalikan null jika tidak ada langkah', () => {
+  assert.equal(chooseAiMove(makeState()), null);
 });
 
 // ---- applyMove: validasi move ilegal ----

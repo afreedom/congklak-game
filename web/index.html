@@ -25,8 +25,9 @@
 
     <div class="side-panel">
       <div id="message" class="message"></div>
+      <p id="game-mode" class="game-mode"></p>
       <button id="restart" type="button">Main Baru</button>
-      <button id="rename" type="button">Ganti Nama Pemain</button>
+      <button id="rename" type="button">Pengaturan Pemain</button>
       <p class="hint">Klik lubang milikmu di papan 3D untuk jalan. Seret untuk putar, scroll untuk zoom.</p>
     </div>
   </div>
@@ -34,12 +35,32 @@
   <div id="name-modal" class="modal-backdrop hidden">
     <form id="name-form" class="modal-card">
       <h2>Siapa yang main?</h2>
+      <label for="play-mode">Mode permainan</label>
+      <select id="play-mode" name="play-mode">
+        <option value="ai">Lawan AI</option>
+        <option value="pvp">2 Pemain</option>
+      </select>
       <label for="name-a">Nama Pemain A</label>
       <input id="name-a" name="name-a" type="text" maxlength="20" autocomplete="off" />
-      <label for="name-b">Nama Pemain B</label>
-      <input id="name-b" name="name-b" type="text" maxlength="20" autocomplete="off" />
+      <div id="player-b-fields" class="player-fields">
+        <label for="name-b">Nama Pemain B</label>
+        <input id="name-b" name="name-b" type="text" maxlength="20" autocomplete="off" />
+      </div>
       <button type="submit">Mulai Main</button>
     </form>
+  </div>
+
+  <div id="result-modal" class="result-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <div id="celebration" class="celebration" aria-hidden="true"></div>
+    <section id="result-card" class="result-card">
+      <div id="result-icon" class="result-icon"></div>
+      <p id="result-kicker" class="result-kicker"></p>
+      <h2 id="result-title"></h2>
+      <p id="result-score" class="result-score"></p>
+      <p id="result-message" class="result-message"></p>
+      <button id="play-again" class="play-again" type="button">🔥 Main Lagi!</button>
+      <button id="result-settings" class="result-settings" type="button">Ganti Mode</button>
+    </section>
   </div>
 
   <div id="loading" class="loading">Memuat papan 3D...</div>
