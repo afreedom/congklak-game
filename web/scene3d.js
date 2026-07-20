@@ -713,8 +713,18 @@ export function createScene(container) {
   scene.background = new THREE.Color(0xa9d4df);
   scene.fog = new THREE.Fog(0xc4d2bc, 25, 68);
 
-  const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-  camera.position.set(0, 8.2, 10.8);
+  function usesPortraitFraming() {
+    return container.clientWidth / container.clientHeight < 0.85;
+  }
+
+  let portraitFraming = usesPortraitFraming();
+  const camera = new THREE.PerspectiveCamera(
+    portraitFraming ? 78 : 45,
+    container.clientWidth / container.clientHeight,
+    0.1,
+    100
+  );
+  camera.position.set(0, portraitFraming ? 13.5 : 8.2, portraitFraming ? 18 : 10.8);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -731,7 +741,7 @@ export function createScene(container) {
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.minDistance = 6;
-  controls.maxDistance = 20;
+  controls.maxDistance = 30;
   controls.maxPolarAngle = Math.PI * 0.47;
   controls.update();
 
@@ -1123,6 +1133,14 @@ export function createScene(container) {
     const w = container.clientWidth;
     const h = container.clientHeight;
     camera.aspect = w / h;
+    const nextPortraitFraming = usesPortraitFraming();
+    if (nextPortraitFraming !== portraitFraming) {
+      portraitFraming = nextPortraitFraming;
+      camera.fov = portraitFraming ? 78 : 45;
+      camera.position.set(0, portraitFraming ? 13.5 : 8.2, portraitFraming ? 18 : 10.8);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    }
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
   }
