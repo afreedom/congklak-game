@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ---- Layout konstanta ----
 const SPACING = 1.7;
@@ -11,7 +12,8 @@ const STORE_RADIUS_X = 0.75;
 const STORE_RADIUS_Z = 1.55;
 const STORE_GAP = 1.55;
 const STORE_X = CENTER_X + STORE_GAP + STORE_RADIUS_X;
-const SEED_RADIUS = 0.11;
+const SEED_RADIUS = 0.14;
+const SEED_HEIGHT = 0.1;
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 function columnOf(hole) {
@@ -36,19 +38,95 @@ function seedLocalPosition(i, radiusX, radiusZ) {
   const theta = j * GOLDEN_ANGLE + layer * 0.65;
   return new THREE.Vector3(
     radiusX * Math.sqrt(t) * Math.cos(theta),
-    SEED_RADIUS * 0.85 + layer * SEED_RADIUS * 1.6,
+    SEED_HEIGHT * 0.58 + layer * SEED_HEIGHT * 0.95,
     radiusZ * Math.sqrt(t) * Math.sin(theta)
   );
 }
 
-const SEED_COLORS = [0xcaa06a, 0xb8875a, 0xdcb583, 0xa87c4f, 0xc99b6a];
+const SHELL_COLORS = [0xf2e5c3, 0xffe09a, 0xe8e4d5, 0xd9c69e, 0xf6d7a1, 0xded8bd];
+const shellMaterials = SHELL_COLORS.map((color) => new THREE.MeshPhysicalMaterial({
+  color,
+  roughness: 0.24,
+  metalness: 0,
+  clearcoat: 0.72,
+  clearcoatRoughness: 0.2,
+}));
+const slitMaterial = new THREE.MeshStandardMaterial({ color: 0x24160f, roughness: 0.82 });
+const toothMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0xfff3d5,
+  roughness: 0.3,
+  clearcoat: 0.35,
+});
 
-function makeSeedMaterial(seed) {
-  const color = SEED_COLORS[seed % SEED_COLORS.length];
-  return new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.05 });
+// Bentuk cangkang cowrie: badan oval menggembung dengan salah satu ujung sedikit meruncing.
+const shellGeometry = new THREE.SphereGeometry(1, 20, 14);
+const shellPositions = shellGeometry.attributes.position;
+for (let i = 0; i < shellPositions.count; i++) {
+  const x = shellPositions.getX(i);
+  const y = shellPositions.getY(i);
+  const z = shellPositions.getZ(i);
+  const taper = 0.91 + 0.09 * (1 - x);
+  shellPositions.setXYZ(i, x * 0.14, y * 0.052, z * 0.082 * taper);
+}
+shellGeometry.computeVertexNormals();
+
+function makeCapsuleShape(halfLength, radius) {
+  const shape = new THREE.Shape();
+  shape.moveTo(-halfLength, -radius);
+  shape.lineTo(halfLength, -radius);
+  shape.quadraticCurveTo(halfLength + radius, -radius, halfLength + radius, 0);
+  shape.quadraticCurveTo(halfLength + radius, radius, halfLength, radius);
+  shape.lineTo(-halfLength, radius);
+  shape.quadraticCurveTo(-halfLength - radius, radius, -halfLength - radius, 0);
+  shape.quadraticCurveTo(-halfLength - radius, -radius, -halfLength, -radius);
+  return shape;
 }
 
-const seedGeometry = new THREE.IcosahedronGeometry(SEED_RADIUS, 1);
+const slitGeometry = new THREE.ShapeGeometry(makeCapsuleShape(0.075, 0.012), 12);
+slitGeometry.rotateX(-Math.PI / 2);
+const toothParts = [];
+for (let i = 0; i < 7; i++) {
+  const x = -0.058 + i * 0.0193;
+  for (const side of [-1, 1]) {
+    const tooth = new THREE.BoxGeometry(0.009, 0.006, 0.019);
+    tooth.rotateY(side * (0.18 + Math.abs(i - 3) * 0.025));
+    tooth.translate(x, 0.0565, side * 0.011);
+    toothParts.push(tooth);
+  }
+}
+const teethGeometry = mergeGeometries(toothParts);
+for (const part of toothParts) part.dispose();
+
+function seedVariation(seed) {
+  const value = Math.sin((seed + 1) * 91.731) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+function orientSeed(seed, hole, index) {
+  seed.rotation.set(
+    (seedVariation(index * 31 + hole) - 0.5) * 0.18,
+    seedVariation(hole * 101 + index * 17) * Math.PI * 2,
+    (seedVariation(index * 53 + hole * 7) - 0.5) * 0.14
+  );
+}
+
+function createCowrieSeed(seed) {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(shellGeometry, shellMaterials[seed % shellMaterials.length]);
+  body.castShadow = true;
+  body.receiveShadow = true;
+  group.add(body);
+
+  // Celah dan dua baris gerigi dibuat sedikit di atas badan agar terbaca dari kamera permainan.
+  const slit = new THREE.Mesh(slitGeometry, slitMaterial);
+  slit.position.y = 0.053;
+  group.add(slit);
+
+  group.add(new THREE.Mesh(teethGeometry, toothMaterial));
+
+  group.scale.setScalar(0.94 + seedVariation(seed * 13) * 0.12);
+  return group;
+}
 
 export function createScene(container) {
   const scene = new THREE.Scene();
@@ -199,10 +277,7 @@ export function createScene(container) {
   // ---- Manajemen biji ----
   function spawnSeedMesh(hole) {
     const entry = holeGroups.get(hole);
-    const mesh = new THREE.Mesh(seedGeometry, makeSeedMaterial(entry.seeds.length + hole * 7));
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    return mesh;
+    return createCowrieSeed(entry.seeds.length + hole * 7);
   }
 
   function relayoutHole(hole) {
@@ -210,6 +285,7 @@ export function createScene(container) {
     entry.seeds.forEach((mesh, i) => {
       const target = seedLocalPosition(i, entry.rx - SEED_RADIUS * 1.3, entry.rz - SEED_RADIUS * 1.3);
       mesh.position.copy(target);
+      orientSeed(mesh, hole, i);
     });
   }
 
@@ -292,8 +368,7 @@ export function createScene(container) {
       );
       const endWorld = endLocal.clone().add(toEntry.wellGroup.position);
 
-      const mesh = new THREE.Mesh(seedGeometry, makeSeedMaterial(toEntry.seeds.length + toHole * 7));
-      mesh.castShadow = true;
+      const mesh = createCowrieSeed(toEntry.seeds.length + toHole * 7);
       mesh.position.copy(startWorld);
       scene.add(mesh);
 
@@ -313,7 +388,7 @@ export function createScene(container) {
           scene.remove(mesh);
           toEntry.seedsGroup.add(mesh);
           mesh.position.copy(endLocal);
-          mesh.rotation.set(0, 0, 0);
+          orientSeed(mesh, toHole, toEntry.seeds.length);
           toEntry.seeds.push(mesh);
           resolve();
         }
@@ -366,7 +441,7 @@ export function createScene(container) {
       fromEntry.seedsGroup.remove(mesh);
       scene.add(mesh);
       mesh.position.copy(world);
-      return { mesh, from: world, to: worldTarget, local: localTarget };
+      return { mesh, from: world, to: worldTarget, local: localTarget, index: toEntry.seeds.length + i };
     });
 
     return new Promise((resolve) => {
@@ -384,6 +459,7 @@ export function createScene(container) {
             scene.remove(item.mesh);
             toEntry.seedsGroup.add(item.mesh);
             item.mesh.position.copy(item.local);
+            orientSeed(item.mesh, toHole, item.index);
             toEntry.seeds.push(item.mesh);
           }
           resolve();
