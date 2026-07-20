@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Congklak 3D</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="scene-container"></div>
+
+  <div class="hud">
+    <header class="hud-top">
+      <h1>Congklak 3D</h1>
+      <p id="turn-indicator" class="turn-indicator"></p>
+    </header>
+
+    <div class="side-panel">
+      <div id="message" class="message"></div>
+      <button id="restart" type="button">Main Baru</button>
+      <button id="rename" type="button">Ganti Nama Pemain</button>
+      <p class="hint">Klik lubang milikmu di papan 3D untuk jalan. Seret untuk putar, scroll untuk zoom.</p>
+    </div>
+  </div>
+
+  <div id="name-modal" class="modal-backdrop hidden">
+    <form id="name-form" class="modal-card">
+      <h2>Siapa yang main?</h2>
+      <label for="name-a">Nama Pemain A</label>
+      <input id="name-a" name="name-a" type="text" maxlength="20" autocomplete="off" />
+      <label for="name-b">Nama Pemain B</label>
+      <input id="name-b" name="name-b" type="text" maxlength="20" autocomplete="off" />
+      <button type="submit">Mulai Main</button>
+    </form>
+  </div>
+
+  <div id="loading" class="loading">Memuat papan 3D...</div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "congklak-game",
+  "version": "1.0.0",
+  "description": "Logic permainan Congklak (Mancala Indonesia)",
+  "type": "module",
+  "main": "src/congklak.js",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "serve": "node scripts/serve.js"
+  },
+  "author": "",
+  "license": "MIT"
+}
