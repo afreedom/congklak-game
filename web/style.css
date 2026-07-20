@@ -248,6 +248,7 @@ html, body {
   position: absolute;
   transform: translate(-50%, -50%);
   pointer-events: none;
+  opacity: 0.65;
   font-weight: 700;
   font-size: 0.95rem;
   color: #fff8ec;
