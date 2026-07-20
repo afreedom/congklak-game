@@ -143,6 +143,63 @@ function makeTraditionalBoardShape(width, depth) {
   return shape;
 }
 
+function addBoardHoles(shape, padding = 1) {
+  for (let hole = 0; hole <= 15; hole++) {
+    const isStore = hole === 7 || hole === 15;
+    const position = holePosition(hole);
+    const cutout = new THREE.Path();
+    cutout.absellipse(
+      position.x,
+      position.z,
+      (isStore ? STORE_RADIUS_X : PIT_RADIUS) * padding,
+      (isStore ? STORE_RADIUS_Z : PIT_RADIUS) * padding,
+      0,
+      Math.PI * 2,
+      true
+    );
+    shape.holes.push(cutout);
+  }
+}
+
+function createBowlGeometry(radialSegments = 48, rings = 12) {
+  const positions = [0, -1, 0];
+  const indices = [];
+
+  for (let ring = 1; ring <= rings; ring++) {
+    const radius = ring / rings;
+    const y = -Math.pow(1 - radius, 2);
+    for (let segment = 0; segment < radialSegments; segment++) {
+      const angle = segment / radialSegments * Math.PI * 2;
+      positions.push(Math.cos(angle) * radius, y, Math.sin(angle) * radius);
+    }
+  }
+
+  for (let segment = 0; segment < radialSegments; segment++) {
+    const current = 1 + segment;
+    const next = 1 + (segment + 1) % radialSegments;
+    indices.push(0, next, current);
+  }
+
+  for (let ring = 1; ring < rings; ring++) {
+    const innerStart = 1 + (ring - 1) * radialSegments;
+    const outerStart = innerStart + radialSegments;
+    for (let segment = 0; segment < radialSegments; segment++) {
+      const nextSegment = (segment + 1) % radialSegments;
+      const inner = innerStart + segment;
+      const innerNext = innerStart + nextSegment;
+      const outer = outerStart + segment;
+      const outerNext = outerStart + nextSegment;
+      indices.push(inner, outerNext, outer, inner, innerNext, outerNext);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
 function traceBoardCanvas(ctx, width, height, inset = 0) {
   const shoulder = 74;
   ctx.beginPath();
@@ -339,6 +396,7 @@ export function createScene(container) {
   const boardWidth = STORE_X * 2 + STORE_RADIUS_X * 2.5;
   const boardDepth = ROW_Z * 2 + PIT_RADIUS * 2.65;
   const boardShape = makeTraditionalBoardShape(boardWidth, boardDepth);
+  addBoardHoles(boardShape, 1.04);
   const boardGeometry = new THREE.ExtrudeGeometry(boardShape, {
     depth: 0.5,
     bevelEnabled: false,
@@ -388,6 +446,7 @@ export function createScene(container) {
   const holeGroups = new Map(); // hole -> { well, ring, seedsGroup, seeds: [] }
   const pitWellMaterial = new THREE.MeshStandardMaterial({ color: 0x32170d, roughness: 0.88 });
   const storeWellMaterial = new THREE.MeshStandardMaterial({ color: 0x281108, roughness: 0.9 });
+  const bowlGeometry = createBowlGeometry();
   const carvedRingGeometry = new THREE.TorusGeometry(1, 0.075, 12, 48);
   const carvedRingMaterial = new THREE.MeshStandardMaterial({
     color: 0x4e2010,
@@ -407,11 +466,11 @@ export function createScene(container) {
     scene.add(wellGroup);
 
     const wellMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(1, 1, PIT_DEPTH, 28),
+      bowlGeometry,
       isStore ? storeWellMaterial : pitWellMaterial
     );
-    wellMesh.scale.set(rx, 1, rz);
-    wellMesh.position.y = -PIT_DEPTH / 2;
+    wellMesh.scale.set(rx, PIT_DEPTH, rz);
+    wellMesh.position.y = 0.008;
     wellMesh.receiveShadow = true;
     wellGroup.add(wellMesh);
 
