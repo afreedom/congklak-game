@@ -271,7 +271,15 @@ if (isFirstVisit) {
 
 const scene = createScene(container);
 
-let state = initGame();
+function createInitialState() {
+  const initial = initGame();
+  if (playMode === 'ai' && Math.random() < 0.5) {
+    return { ...initial, currentPlayer: 'B' };
+  }
+  return initial;
+}
+
+let state = createInitialState();
 let animating = false;
 
 function storeOf(player) {
@@ -433,12 +441,13 @@ scene.onPitClick(handlePitClick);
 function resetGame() {
   if (animating) return;
   hideAiResult();
-  state = initGame();
+  state = createInitialState();
   messageEl.textContent = '';
   scene.setBoard(state.board);
   syncInteractivity();
   updateHud();
   playGameSound('start');
+  runAiIfNeeded();
 }
 
 restartBtn.addEventListener('click', resetGame);
@@ -452,3 +461,4 @@ scene.setBoard(state.board);
 syncInteractivity();
 updateHud();
 loadingEl.classList.add('hidden');
+runAiIfNeeded();
